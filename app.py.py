@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objs as go
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
+from statsmodels.tsa.arima.model import ARIMA
 import os
 
 app = Flask(__name__)
@@ -27,11 +28,19 @@ def triple_exponential_smoothing(data, alpha, beta, gamma):
     results = model.fit(smoothing_level=alpha, smoothing_trend=beta, smoothing_seasonal=gamma)
     return results.fittedvalues
 
+# Perform ARIMA
+def arima_model(data, p, d, q):
+    model = ARIMA(data, order=(p, d, q))
+    results = model.fit()
+    return results.fittedvalues
+
 @app.route('/')
 def index():
-    template_path = os.path.join(os.getcwd(), 'templates', 'index.html')
-    print(f"Attempting to render template: {template_path}")
     return render_template('index.html')
+
+@app.route('/arima')
+def arima():
+    return render_template('arima.html')
 
 @app.route('/update_graph', methods=['POST'])
 def update_graph():
@@ -46,6 +55,26 @@ def update_graph():
     trace2 = go.Scatter(x=fitted.index.tolist(), y=fitted.values.tolist(), mode='lines', name='Fitted Data')
     
     layout = go.Layout(title='Triple Exponential Smoothing',
+                       xaxis=dict(title='Time'),
+                       yaxis=dict(title='Value'))
+    
+    fig = go.Figure(data=[trace1, trace2], layout=layout)
+    
+    return jsonify(fig.to_dict())
+
+@app.route('/update_arima', methods=['POST'])
+def update_arima():
+    p = int(request.form['p'])
+    d = int(request.form['d'])
+    q = int(request.form['q'])
+    
+    data = generate_data()
+    fitted = arima_model(data, p, d, q)
+    
+    trace1 = go.Scatter(x=data.index.tolist(), y=data.values.tolist(), mode='lines', name='Original Data')
+    trace2 = go.Scatter(x=fitted.index.tolist(), y=fitted.values.tolist(), mode='lines', name='Fitted Data')
+    
+    layout = go.Layout(title=f'ARIMA({p},{d},{q})',
                        xaxis=dict(title='Time'),
                        yaxis=dict(title='Value'))
     
