@@ -1,0 +1,2 @@
+head(EuStockMarkets)
+plot(EuStockMarkets)
